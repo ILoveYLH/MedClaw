@@ -40,6 +40,18 @@ WINDOW_PRESETS: Dict[str, tuple] = {
 }
 
 
+def _set_slice(key: str, value: int) -> None:
+    """将切片滑块的 session state 更新为指定切片索引。
+
+    用作 st.button 的 on_click 回调，实现"跳转到结节"功能。
+
+    Args:
+        key:   切片滑块的 session state key (即 f"{key_prefix}_slice")
+        value: 目标切片索引
+    """
+    st.session_state[key] = value
+
+
 def render_ct_viewer(
     ct_volume: CTVolume,
     findings: Optional[List[dict]] = None,
@@ -220,6 +232,25 @@ def render_ct_viewer(
         for idx, nodule in enumerate(visible_nodules[:6]):
             with cols[idx % 3]:
                 _render_nodule_card(nodule)
+
+    # --------------------------------------------------------
+    # 结节快速导航列表
+    # --------------------------------------------------------
+    if annotations:
+        slice_key = f"{key_prefix}_slice"
+        with st.expander(
+            f"🔍 结节检测列表（共 {len(annotations)} 枚）",
+            expanded=False,
+        ):
+            st.caption("点击按钮可直接跳转到对应结节的中心切片。")
+            for nodule in annotations:
+                st.button(
+                    f"#{nodule.nodule_id} - Z: {nodule.center_slice} - 置信度: {nodule.confidence:.0%}",
+                    key=f"{key_prefix}_jump_{nodule.nodule_id}",
+                    on_click=_set_slice,
+                    args=(slice_key, nodule.center_slice),
+                    use_container_width=True,
+                )
 
 
 def _render_nodule_card(nodule: NoduleAnnotation) -> None:
